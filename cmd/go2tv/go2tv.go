@@ -20,14 +20,16 @@ import (
 )
 
 var (
-	version    string
-	build      string
-	dmrURL     string
-	videoArg   = flag.String("v", "", "Path to the video file. (Triggers the CLI mode)")
-	subsArg    = flag.String("s", "", "Path to the subtitles file.")
-	listPtr    = flag.Bool("l", false, "List all available UPnP/DLNA MediaRenderer models and URLs.")
-	targetPtr  = flag.String("t", "", "Cast to a specific UPnP/DLNA MediaRenderer URL.")
-	versionPtr = flag.Bool("version", false, "Print version.")
+	version       string
+	build         string
+	dmrURL        string
+	videoArg      = flag.String("v", "", "Path to the video file. (Triggers the CLI mode)")
+	UrlArg        = flag.String("u", "", "URL to the video file. (Triggers the CLI mode)")
+	subsArg       = flag.String("s", "", "Path to the subtitles file.")
+	listPtr       = flag.Bool("l", false, "List all available UPnP/DLNA MediaRenderer models and URLs.")
+	targetPtr     = flag.String("t", "", "Cast to a specific UPnP/DLNA MediaRenderer URL.")
+	exitOnPlaying = flag.Bool("e", false, "Exit when playing get playing status")
+	versionPtr    = flag.Bool("version", false, "Print version.")
 )
 
 func main() {
@@ -40,7 +42,7 @@ func main() {
 	if exit {
 		os.Exit(0)
 	}
-	if *videoArg != "" {
+	if *videoArg != "" || *UrlArg != "" {
 		guiEnabled = false
 	}
 
@@ -48,6 +50,9 @@ func main() {
 		scr := gui.InitFyneNewScreen()
 		gui.Start(scr)
 	}
+
+	urlToCast, err := url.Parse(*UrlArg)
+	check(err)
 
 	absVideoFile, err := filepath.Abs(*videoArg)
 	check(err)
@@ -64,16 +69,29 @@ func main() {
 	scr, err := interactive.InitTcellNewScreen()
 	check(err)
 
+	if *exitOnPlaying {
+		go func() {
+			time.Sleep(5 * time.Second)
+			os.Exit(0)
+		}()
+	}
+
 	// The String() method of the net/url package will properly escape the URL
 	// compared to the url.QueryEscape() method.
 	videoFileURLencoded := &url.URL{Path: filepath.Base(absVideoFile)}
 	subsFileURLencoded := &url.URL{Path: filepath.Base(absSubtitlesFile)}
 
+	videoURL := "http://" + whereToListen + "/" + videoFileURLencoded.String()
+
+	if urlToCast != nil {
+		videoURL = urlToCast.String()
+	}
+
 	tvdata := &soapcalls.TVPayload{
 		TransportURL:  transportURL,
 		ControlURL:    controlURL,
 		CallbackURL:   "http://" + whereToListen + "/callback",
-		VideoURL:      "http://" + whereToListen + "/" + videoFileURLencoded.String(),
+		VideoURL:      videoURL,
 		SubtitlesURL:  "http://" + whereToListen + "/" + subsFileURLencoded.String(),
 		CurrentTimers: make(map[string]*time.Timer),
 	}
@@ -152,8 +170,10 @@ func checkflags() (exit bool, err error) {
 		return false, errors.Wrap(err, "checkflags error")
 	}
 
-	if err := checkVflag(); err != nil {
-		return false, errors.Wrap(err, "checkflags error")
+	if *UrlArg == "" {
+		if err := checkVflag(); err != nil {
+			return false, errors.Wrap(err, "checkflags error")
+		}
 	}
 
 	if list {
@@ -238,5 +258,5 @@ func checkVerflag() {
 }
 
 func checkGUI() bool {
-	return *videoArg == "" && !*listPtr
+	return *videoArg == "" && !*listPtr && *UrlArg == ""
 }
