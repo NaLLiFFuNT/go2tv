@@ -66,8 +66,17 @@ func main() {
 	whereToListen, err := iptools.URLtoListenIPandPort(dmrURL)
 	check(err)
 
-	scr, err := interactive.InitTcellNewScreen()
-	check(err)
+	var scr httphandlers.Screen
+	var interactiveScr *interactive.NewScreen
+
+	if *exitOnPlaying {
+		scr, err = interactive.InitNoScreen()
+		check(err)
+	} else {
+		interactiveScr, err := interactive.InitTcellNewScreen()
+		check(err)
+		scr = interactiveScr
+	}
 
 	// The String() method of the net/url package will properly escape the URL
 	// compared to the url.QueryEscape() method.
@@ -112,7 +121,8 @@ func main() {
 		for {
 		}
 	}
-	scr.InterInit(*tvdata)
+
+	interactiveScr.InterInit(*tvdata)
 }
 
 func check(err error) {
@@ -121,6 +131,8 @@ func check(err error) {
 		os.Exit(1)
 	}
 }
+
+// /usr/bin/go2tv -e -u http://stream.voidboost.cc/2/0/6/4/6/2/11de723f733f2ab07271274782f55547:2021072608:Skt3cGw1cXNhWHNSNXBRaUx2d2NyL2ZuV3dQTnBaQVY0alhOditwczhvVnR1WnJFcXpIMmd4bWkyWUozcXFzcW95bGhrWkJMa3VoQ0txZC82b3Q4Tnc9PQ==/2jlr7.mp4:hls:manifest.m3u8
 
 func listFlagFunction() error {
 	if len(devices.Devices) == 0 {

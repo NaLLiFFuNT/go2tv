@@ -131,3 +131,17 @@ func InitTcellNewScreen() (*NewScreen, error) {
 		Current: s,
 	}, nil
 }
+
+func InitNoScreen() (*NoScreen, error) {
+	return &NoScreen{}, nil
+}
+
+type NoScreen struct {
+}
+
+func (p *NoScreen) EmitMsg(inputtext string) {
+	println(inputtext)
+}
+func (p *NoScreen) Fini() {
+	os.Exit(0)
+}
