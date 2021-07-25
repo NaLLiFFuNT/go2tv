@@ -69,13 +69,6 @@ func main() {
 	scr, err := interactive.InitTcellNewScreen()
 	check(err)
 
-	if *exitOnPlaying {
-		go func() {
-			time.Sleep(5 * time.Second)
-			os.Exit(0)
-		}()
-	}
-
 	// The String() method of the net/url package will properly escape the URL
 	// compared to the url.QueryEscape() method.
 	videoFileURLencoded := &url.URL{Path: filepath.Base(absVideoFile)}
@@ -111,6 +104,14 @@ func main() {
 	err = tvdata.SendtoTV("Play1")
 	check(err)
 
+	if *exitOnPlaying {
+		go func() {
+			time.Sleep(5 * time.Second)
+			os.Exit(0)
+		}()
+		for {
+		}
+	}
 	scr.InterInit(*tvdata)
 }
 
